@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+playwright
+transformers
+torch
+beautifulsoup4
+lxml
