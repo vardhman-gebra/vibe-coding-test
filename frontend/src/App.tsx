@@ -1,10 +1,68 @@
 import { useState } from "react";
 
+interface CROBreakdown {
+  title: number;
+  meta_description: number;
+  h1_tags: number;
+  ctas: number;
+  forms: number;
+  content: number;
+}
+
+interface CROAnalysis {
+  url: string;
+  score: number;
+  breakdown: CROBreakdown;
+  recommendations: string[];
+}
+
 function App() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [analysis, setAnalysis] = useState<CROAnalysis | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!url) return;
+
+    setLoading(true);
+    setError(null);
+    setAnalysis(null);
+
+    try {
+      const response = await fetch("http://localhost:8000/api/cro/recommendations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to analyze URL");
+      }
+
+      const data = await response.json();
+      setAnalysis(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 75) return "text-green-600";
+    if (score >= 50) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const getScoreBgColor = (score: number) => {
+    if (score >= 75) return "bg-green-100 border-green-300";
+    if (score >= 50) return "bg-yellow-100 border-yellow-300";
+    return "bg-red-100 border-red-300";
   };
 
   return (
@@ -74,6 +132,117 @@ function App() {
             </button>
           </form>
         </div>
+
+        {error && (
+          <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-6 mb-6">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">❌</span>
+              <div>
+                <h3 className="text-lg font-semibold text-red-800 mb-1">
+                  Error
+                </h3>
+                <p className="text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {analysis && (
+          <div className="space-y-6">
+            {/* Score Display */}
+            <div
+              className={`rounded-2xl p-8 border-2 ${getScoreBgColor(
+                analysis.score
+              )} shadow-lg`}
+            >
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                  CRO Score
+                </h2>
+                <div
+                  className={`text-7xl font-bold ${getScoreColor(
+                    analysis.score
+                  )}`}
+                >
+                  {analysis.score}
+                  <span className="text-4xl">/100</span>
+                </div>
+                <p className="mt-4 text-gray-600">
+                  {analysis.score >= 75
+                    ? "🎉 Excellent conversion optimization!"
+                    : analysis.score >= 50
+                    ? "👍 Good, but room for improvement"
+                    : "⚠️ Needs significant improvements"}
+                </p>
+              </div>
+            </div>
+
+            {/* Breakdown */}
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <h3 className="text-2xl font-bold text-gray-800 mb-6">
+                Score Breakdown
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(analysis.breakdown).map(([key, value]) => {
+                  const maxScores: Record<string, number> = {
+                    title: 20,
+                    meta_description: 15,
+                    h1_tags: 15,
+                    ctas: 25,
+                    forms: 15,
+                    content: 10,
+                  };
+                  const maxScore = maxScores[key] || 0;
+                  const percentage = (value / maxScore) * 100;
+
+                  return (
+                    <div
+                      key={key}
+                      className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-semibold text-gray-700 capitalize">
+                          {key.replace(/_/g, " ")}
+                        </span>
+                        <span className="font-bold text-indigo-600">
+                          {value}/{maxScore}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Recommendations */}
+            {analysis.recommendations.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-lg p-8">
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">
+                  Recommendations
+                </h3>
+                <div className="space-y-3">
+                  {analysis.recommendations.map((recommendation, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200"
+                    >
+                      <span className="text-blue-600 font-bold text-lg">
+                        {index + 1}.
+                      </span>
+                      <p className="text-gray-700 flex-1">{recommendation}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="text-center mt-8 text-gray-500 text-sm">
           Powered by AI • FastAPI • React • Playwright
