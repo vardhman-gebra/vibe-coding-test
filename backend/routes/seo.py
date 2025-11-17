@@ -4,7 +4,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/cro", tags=["CRO"])
+router = APIRouter(prefix="/api/seo", tags=["SEO"])
 
 
 @router.post("/recommendations")

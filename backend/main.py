@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import cro_router
+from routes import seo_router
 from config import (
     API_TITLE,
     API_DESCRIPTION,
@@ -27,7 +27,7 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(cro_router)
+app.include_router(seo_router)
 
 
 @app.get("/")
